@@ -1,231 +1,311 @@
 import java.awt.*;
-import java.util.ArrayList;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
 
-public class Wall {
+public class Wall extends WallOrChain {
 
-    int lineWidthOnGreenSquare = 4, squareWidthOnGreenSquare = 20, squareHeightOnGreenSquare = 20;
-    int index;
-    Color c;
-    int xInd, yInd, xCoor, yCoor, turn;
-    int[] initialXCoors;
-    int[] initialYCoors;
-    double centerX, centerY;
-    boolean visible = false;
-    ArrayList<Point> points = new ArrayList<Point>();
-    ArrayList<Rectangle> rects = new ArrayList<Rectangle>();
-    ArrayList<Rectangle> rectsOnGreenSquare = new ArrayList<Rectangle>();
-    Rectangle wallContainer;
-    int lineWidth;
+	public Wall(int x_Ind, int y_Ind, int[] xCoors, int[] yCoors, Color c, int index, int initialXShift,
+			int initialYShift, int squareHeight, int squareWidth, int mapHeight, int mapWidth) {
+		super(x_Ind, y_Ind, xCoors, yCoors, c, index, initialXShift, initialYShift, squareHeight, squareWidth,
+				mapHeight, mapWidth);
+	}
 
-    Wall(int x_Ind, int y_Ind, int[] xCoors, int[] yCoors, Color c, int index, Rectangle rectangle, int initialXShift, int initialYShift, int squareHeight, int squareWidth) {
-        
-        initialXCoors = new int[xCoors.length];
-        for(int i = 0; i < xCoors.length; i++)
-            initialXCoors[i] = xCoors[i];
-        
-        initialYCoors = new int[yCoors.length];
-        for(int i = 0; i < yCoors.length; i++)
-            initialYCoors[i] = yCoors[i];
-        
-        this.wallContainer = rectangle;
-        double totalX = 0;
-        double totalY = 0;
-        lineWidth = squareWidth / 10;
+	void draw(Graphics g, int initialXShift, int initialYShift, int squareHeight, int squareWidth, int shiftY) {
+		drawWallOption(g, initialXShift, initialYShift, squareHeight, squareWidth);
+		setTheRectanglePoints(squareHeight, squareWidth, shiftY);
+		g.setColor(getColor());
 
-        for (int i = 0; i < xCoors.length; i++) {
-            totalX += xCoors[i];
-            totalY += yCoors[i];
-            points.add(new Point(xCoors[i], yCoors[i]));
-        }
+		BufferedImage imgLine = new BufferedImage(wallLine.getWidth(null), wallLine.getHeight(null),
+				BufferedImage.TYPE_INT_ARGB);
 
-        centerX = totalX / xCoors.length;
-        centerY = totalY / yCoors.length;
+		// Draw the image on to the buffered image
+		Graphics2D bGr = imgLine.createGraphics();
+		bGr.drawImage(wallLine, 0, 0, null);
+		bGr.dispose();
 
-        xInd = x_Ind;
-        yInd = y_Ind;
+		// get width and height of the image
+		int width = imgLine.getWidth();
+		int height = imgLine.getHeight();
+		// convert to sepia
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				int p = imgLine.getRGB(x, y);
 
-        xCoor = initialXShift + xInd * squareWidth;
-        yCoor = initialYShift + yInd * squareHeight;
+				int a = (p >> 24) & 0xff;
+				int R = (p >> 16) & 0xff;
+				int G = (p >> 8) & 0xff;
+				int B = p & 0xff;
 
-        int nextXCoor = xCoor;
-        int nextYCoor = yCoor;
-        for (int i = 0; i < points.size() - 1; i++) {
-            if (points.get(i).x < points.get(i + 1).x) {
-                rects.add(new Rectangle(nextXCoor, nextYCoor - lineWidth / 2, squareWidth, lineWidth));
-                nextXCoor = nextXCoor + squareWidth;
-            } else if (points.get(i).y < points.get(i + 1).y) {
-                rects.add(new Rectangle(nextXCoor - lineWidth / 2, nextYCoor, lineWidth, squareHeight));
-                nextYCoor = nextYCoor + squareHeight;
-            } else if (points.get(i).x > points.get(i + 1).x) {
-                rects.add(new Rectangle(nextXCoor - squareWidth, nextYCoor - lineWidth / 2, squareWidth, lineWidth));
-                nextXCoor = nextXCoor - squareWidth;
-            } else if (points.get(i).y > points.get(i + 1).y) {
-                rects.add(new Rectangle(nextXCoor - lineWidth / 2, nextYCoor - squareHeight, lineWidth, squareHeight));
-                nextYCoor = nextYCoor - squareHeight;
-            }
-        }
+				// calculate newRed, newGreen, newBlue
+				int newRed = (int) ((getColor().getRed() / 300.0) * R);
+				int newGreen = (int) ((getColor().getGreen() / 300.0) * G);
+				int newBlue = (int) ((getColor().getBlue() / 300.0) * B);
 
-        nextXCoor = (int) (rectangle.getCenterX() - (centerX) * squareHeightOnGreenSquare);
-        nextYCoor = (int) (rectangle.getCenterY() - (centerY) * squareHeightOnGreenSquare);
-        for (int i = 0; i < points.size() - 1; i++) {
-            if (points.get(i).x < points.get(i + 1).x) {
-                rectsOnGreenSquare.add(new Rectangle(nextXCoor, nextYCoor - lineWidthOnGreenSquare / 2, squareWidthOnGreenSquare, lineWidthOnGreenSquare));
-                nextXCoor = nextXCoor + squareWidthOnGreenSquare;
-            } else if (points.get(i).y < points.get(i + 1).y) {
-                rectsOnGreenSquare.add(new Rectangle(nextXCoor - lineWidthOnGreenSquare / 2, nextYCoor, lineWidthOnGreenSquare, squareHeightOnGreenSquare));
-                nextYCoor = nextYCoor + squareHeightOnGreenSquare;
-            } else if (points.get(i).x > points.get(i + 1).x) {
-                rectsOnGreenSquare.add(new Rectangle(nextXCoor - squareWidthOnGreenSquare, nextYCoor - lineWidthOnGreenSquare / 2, squareWidthOnGreenSquare, lineWidthOnGreenSquare));
-                nextXCoor = nextXCoor - squareWidthOnGreenSquare;
-            } else if (points.get(i).y > points.get(i + 1).y) {
-                rectsOnGreenSquare.add(new Rectangle(nextXCoor - lineWidthOnGreenSquare / 2, nextYCoor - squareHeightOnGreenSquare, lineWidthOnGreenSquare, squareHeightOnGreenSquare));
-                nextYCoor = nextYCoor - squareHeightOnGreenSquare;
-            }
-        }
-        this.c = c;
-        this.index = index;
-    }
+				// check condition
+				if (newRed > 255)
+					R = 255;
+				else
+					R = newRed;
 
-    Color getColor() {
-        return c;
-    }
+				if (newGreen > 255)
+					G = 255;
+				else
+					G = newGreen;
 
-    void draw(Graphics g, int initialXShift, int initialYShift, int squareHeight, int squareWidth) {
-        setTheRectanglePoints(squareHeight, squareWidth);
-        g.setColor(getColor());
-        if (visible) {
-            for (int i = 0; i < points.size() - 1; i++) {
-                g.fillRect((int) rects.get(i).getX(), (int) rects.get(i).getY(), (int) rects.get(i).getWidth(), (int) rects.get(i).getHeight());
-            }
-        } else {
-            for (int i = 0; i < points.size() - 1; i++) {
-                g.fillRect((int) rectsOnGreenSquare.get(i).getX(), (int) rectsOnGreenSquare.get(i).getY(), (int) rectsOnGreenSquare.get(i).getWidth(), (int) rectsOnGreenSquare.get(i).getHeight());
-            }
-        }
-    }
+				if (newBlue > 255)
+					B = 255;
+				else
+					B = newBlue;
 
-    void turnLeft() {
-        for (Point p : points) {
-            int px = p.x;
-            int py = p.y;
+				// set new RGB value
+				p = (a << 24) | (R << 16) | (G << 8) | B;
 
-            p.x = -py;
-            p.y = px;
-        }
+				imgLine.setRGB(x, y, p);
+			}
+		}
 
-        turn++;
-        turn = turn % 4;
+		BufferedImage imgEdge = new BufferedImage(wallEdge.getWidth(null), wallEdge.getHeight(null),
+				BufferedImage.TYPE_INT_ARGB);
 
-        double centX = centerX;
-        double centY = centerY;
-        centerX = -centY;
-        centerY = centX;
-    }
+		// Draw the image on to the buffered image
+		Graphics2D bGr2 = imgEdge.createGraphics();
+		bGr2.drawImage(wallEdge, 0, 0, null);
+		bGr2.dispose();
 
-    void setRectangles() {
+		// get width and height of the image
+		width = imgEdge.getWidth();
+		height = imgEdge.getHeight();
+		// convert to sepia
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				int p = imgEdge.getRGB(x, y);
 
-        int nextXCoor = (int) (wallContainer.getCenterX() - (centerX) * squareHeightOnGreenSquare);
-        int nextYCoor = (int) (wallContainer.getCenterY() - (centerY) * squareHeightOnGreenSquare);
-        for (int i = 0; i < points.size() - 1; i++) {
-            if (points.get(i).x < points.get(i + 1).x) {
-                rectsOnGreenSquare.set(i, new Rectangle(nextXCoor, nextYCoor - lineWidthOnGreenSquare / 2, squareWidthOnGreenSquare, lineWidthOnGreenSquare));
-                nextXCoor = nextXCoor + squareWidthOnGreenSquare;
-            } else if (points.get(i).y < points.get(i + 1).y) {
-                rectsOnGreenSquare.set(i, new Rectangle(nextXCoor - lineWidthOnGreenSquare / 2, nextYCoor, lineWidthOnGreenSquare, squareHeightOnGreenSquare));
-                nextYCoor = nextYCoor + squareHeightOnGreenSquare;
-            } else if (points.get(i).x > points.get(i + 1).x) {
-                rectsOnGreenSquare.set(i, new Rectangle(nextXCoor - squareWidthOnGreenSquare, nextYCoor - lineWidthOnGreenSquare / 2, squareWidthOnGreenSquare, lineWidthOnGreenSquare));
-                nextXCoor = nextXCoor - squareWidthOnGreenSquare;
-            } else if (points.get(i).y > points.get(i + 1).y) {
-                rectsOnGreenSquare.set(i, new Rectangle(nextXCoor - lineWidthOnGreenSquare / 2, nextYCoor - squareHeightOnGreenSquare, lineWidthOnGreenSquare, squareHeightOnGreenSquare));
-                nextYCoor = nextYCoor - squareHeightOnGreenSquare;
-            }
-        }
-    }
+				int a = (p >> 24) & 0xff;
+				int R = (p >> 16) & 0xff;
+				int G = (p >> 8) & 0xff;
+				int B = p & 0xff;
 
-    void setThePositionAgain(int initialXShift, int initialYShift, int squareHeight, int squareWidth) {
-        if ((xCoor - initialXShift) % squareWidth < squareWidth / 2) {
-            xCoor -= (xCoor - initialXShift) % squareWidth;
-        } else {
-            xCoor += squareWidth - ((xCoor - initialXShift) % squareWidth);
-        }
-        if ((yCoor - initialYShift) % squareHeight < squareHeight / 2) {
-            yCoor -= (yCoor - initialYShift) % squareHeight;
-        } else {
-            yCoor += squareHeight - ((yCoor - initialYShift) % squareHeight);
-        }
+				// calculate newRed, newGreen, newBlue
+				int newRed = (int) ((getColor().getRed() / 300.0) * R);
+				int newGreen = (int) ((getColor().getGreen() / 300.0) * G);
+				int newBlue = (int) ((getColor().getBlue() / 300.0) * B);
 
-        xInd = (xCoor - initialXShift) / squareWidth;
-        yInd = (yCoor - initialYShift) / squareHeight;
-    }
+				// check condition
+				if (newRed > 255)
+					R = 255;
+				else
+					R = newRed;
 
-    void setTheRectanglePoints(int squareHeight, int squareWidth) {
-        int nextXCoor = xCoor;
-        int nextYCoor = yCoor;
-        for (int i = 0; i < points.size() - 1; i++) {
-            if (points.get(i).x < points.get(i + 1).x) {
-                rects.set(i, new Rectangle(nextXCoor, nextYCoor - lineWidth / 2, squareWidth, lineWidth));
-                nextXCoor = nextXCoor + squareWidth;
-            } else if (points.get(i).y < points.get(i + 1).y) {
-                rects.set(i, new Rectangle(nextXCoor - lineWidth / 2, nextYCoor, lineWidth, squareHeight));
-                nextYCoor = nextYCoor + squareHeight;
-            } else if (points.get(i).x > points.get(i + 1).x) {
-                rects.set(i, new Rectangle(nextXCoor - squareWidth, nextYCoor - lineWidth / 2, squareWidth, lineWidth));
-                nextXCoor = nextXCoor - squareWidth;
-            } else if (points.get(i).y > points.get(i + 1).y) {
-                rects.set(i, new Rectangle(nextXCoor - lineWidth / 2, nextYCoor - squareHeight, lineWidth, squareHeight));
-                nextYCoor = nextYCoor - squareHeight;
-            }
-        }
-    }
+				if (newGreen > 255)
+					G = 255;
+				else
+					G = newGreen;
 
-    void remove() {
-        visible = false;
-    }
+				if (newBlue > 255)
+					B = 255;
+				else
+					B = newBlue;
 
-    void appear() {
-        visible = true;
-    }
+				// set new RGB value
+				p = (a << 24) | (R << 16) | (G << 8) | B;
 
-    boolean contains(int x, int y) {
-        for (int i = 0; i < rects.size(); i++) {
-            if (rects.get(i).contains(x, y)) {
-                return true;
-            }
-        }
-        return false;
-    }
+				imgEdge.setRGB(x, y, p);
+			}
+		}
 
-    void setWallContainer(Rectangle r) {
-        wallContainer = r;
-    }
+		if (visible) {
 
-    void reset(int initialXShift, int initialYShift, int squareHeight, int squareWidth) {
-        double totalX = 0;
-        double totalY = 0;
-        lineWidth = squareWidth / 10;
-        points.clear();
-        for (int i = 0; i < initialXCoors.length; i++) {
-            totalX += initialXCoors[i];
-            totalY += initialYCoors[i];
-            points.add(new Point(initialXCoors[i], initialYCoors[i]));
-        }
-        
-        centerX = totalX / initialXCoors.length;
-        centerY = totalY / initialYCoors.length;
-        
-        xInd = 0;
-        yInd = 0;
-        xCoor = initialXShift + xInd * squareWidth;
-        yCoor = initialYShift + yInd * squareHeight;
-        
-        turn = 0;
-        visible = false;
-        
-        setRectangles();
-        setTheRectanglePoints(squareHeight, squareWidth);
-        xInd = -1;
-        yInd = -1;
-    }
+			Graphics2D g2d = (Graphics2D) g;
+			for (Rectangle r : rects) {
+				if (r.width < r.height) {
+					AffineTransform backup = g2d.getTransform();
+					AffineTransform trans = new AffineTransform();
+					trans.rotate(Math.PI / 2, r.x + lineWidth / 2, r.y + lineWidth / 2);
+					g2d.transform(trans);
+					g2d.drawImage(imgLine, r.x, r.y, r.height, r.width, null);
 
+					g2d.setTransform(backup); // restore previous transform
+				} else
+					g.drawImage(imgLine, r.x, r.y, r.width, r.height, null);
+			}
+			for (int i = 0; i < edgesX.length; i++) {
+				int xEdgeCoor = xCoor + squareWidth * (edgesX[i]) - lineWidth / 2;
+				int yEdgeCoor = yCoor + shiftY + squareHeight * (edgesY[i]) - lineWidth / 2;
+				AffineTransform backup = g2d.getTransform();
+				AffineTransform trans = new AffineTransform();
+				int dir = getDirectionOfTheEdge(i);
+				if (dir == 0) {
+					trans.rotate(dir * Math.PI / 2, xEdgeCoor + lineWidth / 2, yEdgeCoor + lineWidth / 2);
+				} else if (dir == 1) {
+					trans.rotate(-dir * Math.PI / 2, xEdgeCoor + lineWidth / 2, yEdgeCoor + lineWidth / 2);
+				} else if (dir == 2) {
+					trans.rotate(-dir * Math.PI / 2, xEdgeCoor + lineWidth / 2, yEdgeCoor + lineWidth / 2);
+				} else if (dir == 3) {
+					trans.rotate(-dir * Math.PI / 2, xEdgeCoor + lineWidth / 2, yEdgeCoor + lineWidth / 2);
+				}
+
+				g2d.transform(trans);
+				g.drawImage(imgEdge, xEdgeCoor, yEdgeCoor, lineWidth, lineWidth, null);
+
+				g2d.setTransform(backup);
+			}
+
+			int healthWidth = squareWidth / 3;
+			int healthHeight = squareWidth / 8;
+			Rectangle nearestToCenter = getNearestRectToCenter();
+			int CoorX = (int) nearestToCenter.getCenterX();
+			int CoorY = (int) nearestToCenter.getCenterY();
+			if (health != initialHealth) {
+				g.setColor(Color.GREEN);
+				g.drawRect(CoorX - healthWidth / 2, CoorY - healthHeight / 2 - lineWidth, healthWidth, healthHeight);
+				int r = (int) (510 * (1 - health * 1.0 / initialHealth));
+				int gr = (int) (510 * (health * 1.0 / initialHealth));
+				g.setColor(new Color(r >= 255 ? 255 : r, gr >= 255 ? 255 : gr, 0));
+				g.fillRect(CoorX - healthWidth / 2, CoorY - healthHeight / 2 - lineWidth,
+						(int) (healthWidth * (health * 1.0 / initialHealth)), healthHeight);
+			}
+		}
+		Graphics2D g2d = (Graphics2D) g;
+		for (Rectangle r : rectsOnBar) {
+			if (r.width < r.height) {
+				AffineTransform backup = g2d.getTransform();
+				AffineTransform trans = new AffineTransform();
+				trans.rotate(Math.PI / 2, r.x + lineWidthOnBar / 2, r.y + lineWidthOnBar / 2);
+				g2d.transform(trans);
+				g2d.drawImage(imgLine, r.x, r.y, r.height, r.width, null);
+
+				g2d.setTransform(backup); // restore previous transform
+			} else
+				g.drawImage(imgLine, r.x, r.y, r.width, r.height, null);
+		}
+
+		for (int i = 0; i < edgesX.length; i++) {
+			int xEdgeCoor = (int) (wallContainer.getCenterX() - (centerX) * squareWidthOnBar)
+					+ squareWidthOnBar * (edgesX[i]) - lineWidthOnBar / 2;
+			int yEdgeCoor = (int) (wallContainer.getCenterY() - (centerY) * squareHeightOnBar)
+					+ squareHeightOnBar * (edgesY[i]) - lineWidthOnBar / 2;
+			AffineTransform backup = g2d.getTransform();
+			AffineTransform trans = new AffineTransform();
+			int dir = getDirectionOfTheEdge(i);
+			if (dir == 0) {
+				trans.rotate(dir * Math.PI / 2, xEdgeCoor + lineWidthOnBar / 2, yEdgeCoor + lineWidthOnBar / 2);
+			} else if (dir == 1) {
+				trans.rotate(-dir * Math.PI / 2, xEdgeCoor + lineWidthOnBar / 2, yEdgeCoor + lineWidthOnBar / 2);
+			} else if (dir == 2) {
+				trans.rotate(-dir * Math.PI / 2, xEdgeCoor + lineWidthOnBar / 2, yEdgeCoor + lineWidthOnBar / 2);
+			} else if (dir == 3) {
+				trans.rotate(-dir * Math.PI / 2, xEdgeCoor + lineWidthOnBar / 2, yEdgeCoor + lineWidthOnBar / 2);
+			}
+
+			g2d.transform(trans);
+			g.drawImage(imgEdge, xEdgeCoor, yEdgeCoor, lineWidthOnBar, lineWidthOnBar, null);
+
+			g2d.setTransform(backup);
+		}
+
+		// g2d.setColor(Color.gray.brighter().brighter().brighter());
+		// g2d.fill(areaForSquare);
+
+		if (collapsed) {
+			g.setColor(Color.GRAY);
+			Graphics2D g2 = (Graphics2D) g;
+			g2.setStroke(new BasicStroke(2));
+			g2.drawLine(wallContainer.x, wallContainer.y, wallContainer.x + wallContainer.width,
+					wallContainer.y + wallContainer.height);
+			g2.drawLine(wallContainer.x + wallContainer.width, wallContainer.y, wallContainer.x,
+					wallContainer.y + wallContainer.height);
+			g2.setStroke(new BasicStroke(1));
+		}
+	}
+
+	private int getDirectionOfTheEdge(int i) {
+		int dir1 = getDirectionOfTheWall(i);
+		int dir2 = getDirectionOfTheWall(i + 1);
+
+		if (dir1 == Model.UP) {
+			if (dir2 == Model.LEFT) {
+				return 2;
+			}
+			if (dir2 == Model.RIGHT) {
+				return 3;
+			}
+		}
+		if (dir1 == Model.DOWN) {
+			if (dir2 == Model.LEFT) {
+				return 1;
+			}
+			if (dir2 == Model.RIGHT) {
+				return 0;
+			}
+		}
+		if (dir1 == Model.RIGHT) {
+			if (dir2 == Model.UP) {
+				return 1;
+			}
+			if (dir2 == Model.DOWN) {
+				return 2;
+			}
+		}
+		if (dir1 == Model.LEFT) {
+			if (dir2 == Model.UP) {
+				return 0;
+			}
+			if (dir2 == Model.DOWN) {
+				return 3;
+			}
+		}
+		return 0;
+	}
+
+	private int getDirectionOfTheWall(int i) {
+		if (points.get(i).x < points.get(i + 1).x) { // Right
+			return Model.RIGHT;
+		} else if (points.get(i).y < points.get(i + 1).y) { // Down
+			return Model.DOWN;
+		} else if (points.get(i).x > points.get(i + 1).x) { // Left
+			return Model.LEFT;
+		} else if (points.get(i).y > points.get(i + 1).y) { // Up
+			return Model.UP;
+		}
+		return 0;
+	}
+
+	private void drawWallOption(Graphics g, int initialXShift, int initialYShift, int squareHeight, int squareWidth) {
+		if (collapsed) {
+			g.setColor(Color.RED.brighter());
+		} else if (!visible)
+			g.setColor(Color.GRAY.brighter());
+		else
+			g.setColor(Color.GRAY);
+		g.fillRect(wallContainer.x, wallContainer.y, wallContainer.width, wallContainer.height);
+
+		g.setColor(Color.GRAY);
+		g.drawRect(wallContainer.x, wallContainer.y, wallContainer.width, wallContainer.height);
+
+		g.setColor(Color.BLACK);
+		g.setFont(new Font("TimesRoman", Font.PLAIN, squareHeight / 6));
+
+		g.drawString("" + (index + 1), wallContainer.x + squareWidth / 14, wallContainer.y + squareHeight / 6);
+
+		int healthWidth = squareWidth / 10 * 7;
+		int healthHeight = squareWidth / 20;
+
+		int CoorX = (int) wallContainer.getX();
+		int CoorY = (int) wallContainer.getY() + 2 + squareHeight;
+
+		if (health != initialHealth) {
+			g.setColor(Color.GREEN);
+			g.drawRect(CoorX - healthWidth / 2 + squareWidth / 2, CoorY - healthHeight / 2 - lineWidthOnBar,
+					healthWidth, healthHeight);
+			int r = (int) (510 * (1 - health * 1.0 / initialHealth));
+			int gr = (int) (510 * (health * 1.0 / initialHealth));
+			g.setColor(new Color(r >= 255 ? 255 : r, gr >= 255 ? 255 : gr, 0));
+			g.fillRect(CoorX - healthWidth / 2 + squareWidth / 2, CoorY - healthHeight / 2 - lineWidthOnBar,
+					(int) (healthWidth * (health * 1.0 / initialHealth)), healthHeight);
+		}
+	}
+
+	public int getWholeMapIndex() {
+		return Model.WALL;
+	}
 }

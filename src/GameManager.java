@@ -1,7 +1,8 @@
 import java.awt.CardLayout;
 import java.awt.Color;
-import java.awt.Rectangle;
-import javax.swing.JComponent;
+import java.io.IOException;
+import java.util.ArrayList;
+
 import javax.swing.JPanel;
 
 /**
@@ -10,136 +11,130 @@ import javax.swing.JPanel;
  */
 public class GameManager {
 
-    private MyComponents myComponents;
-    private Model model;
-    private CardLayout cardLayout;
-    private JPanel card;
-    private int levelNo;
+	private LevelView levelView;
+	private Model model;
+	private CardLayout cardLayout;
+	private JPanel card;
+	private int levelNo;
+	private FileSystem fileSystem = new FileSystem();
+	GameView gv;
+	
+	//FileSystem improvement
+	private int castle [] = new int [4];
+	private int forest [];
+	private int lake [];
+	private int mapWidth;
+	private int mapLength;
+	private int size_of_soldiers;
 
-    public GameManager(int levelNo, CardLayout cardLayout, JPanel card) {
-        this.cardLayout = cardLayout;
-        this.card = card;
-        this.levelNo = levelNo;
-        run();
-    }
+	public GameManager(GameView gv, int levelNo, CardLayout cardLayout, JPanel card)throws IOException {
+		this.cardLayout = cardLayout;
+		this.card = card;
+		this.levelNo = levelNo;
+		this.gv = gv;
+		run();
+	}
 
-    public void run() {
+	public void run()throws IOException {
+		fileSystem.decryptMapFile();
+			
+		fileSystem.createLevel(levelNo);
+		castle = fileSystem.getCastle();
+		Castle castle = new Castle(this.castle[0], this.castle[1], this.castle[2], this.castle[3], Color.green);
+		mapWidth = fileSystem.getMapWidth();
+		mapLength = fileSystem.getMapLength();
 
-        if (levelNo == 1) {
-            Soldier[] soldiers = new Soldier[6];
-            Wall[] walls = new Wall[4];
-            Rectangle[] wallContainers = new Rectangle[4];
+		model = new Model(mapWidth, mapLength, castle, levelNo);
 
-            // Allies
-            soldiers[0] = new Soldier(1, 0, Color.blue);
-            soldiers[1] = new Soldier(3, 1, Color.blue);
-            soldiers[2] = new Soldier(0, 2, Color.blue);
+		size_of_soldiers = fileSystem.getNumberOfSoldiers();
 
-            // Enemies
-            soldiers[3] = new Soldier(0, 1, Color.red);
-            soldiers[4] = new Soldier(3, 2, Color.red);
-            soldiers[5] = new Soldier(2, 0, Color.red);
+		for(int i = 0; i < size_of_soldiers; i++)
+		{
+			model.addSoldier(fileSystem.getDataStructure().getInst()[0], fileSystem.getDataStructure().getInst()[1], fileSystem.getDataStructure().getNum()[0], fileSystem.getDataStructure().getNum()[1], fileSystem.getDataStructure().getRoute());
+			fileSystem.incrementSize();
+		}
+		fileSystem.resetSize();
 
-            Castle castle = new Castle(2, 2, 1, 2, Color.green);
+		for(int i = 0; i < fileSystem.getNumberOfArmada(); i++)
+		{
+			if (fileSystem.getDataStructureX().getInst()[0])
+				model.addAllyArmada(fileSystem.getDataStructureX().getNum()[0], fileSystem.getDataStructureX().getNum()[1], fileSystem.getDataStructureX().getInst()[1], fileSystem.getDataStructureX().getRoute());
+			else
+				model.addEnemyArmada(fileSystem.getDataStructureX().getNum()[0], fileSystem.getDataStructureX().getNum()[1], fileSystem.getDataStructureX().getInst()[1], fileSystem.getDataStructureX().getRoute());
+			fileSystem.incrementSizeX();
+		}
+		fileSystem.resetSizeX();
 
-            int mapWidth = 5;
-            int mapLength = 4;
-            model = new Model(mapWidth, mapLength, castle, soldiers, levelNo);
-            // 5, 4
+		lake = fileSystem.getLake();
+		for (int i = 0; i < lake.length; i+=2) {
+			int a = lake[i];
+			int b = lake[i+1];
+			model.addLake(a, b);
+		}
 
-            for (int i = 0; i < walls.length; i++) {
-                wallContainers[i] = new Rectangle(model.initialXShift + model.squareWidth * i + (mapWidth - walls.length) * (model.squareWidth - 2) / 2, model.initialYShift + model.squareHeight * (mapLength + 1), model.squareWidth, model.squareHeight);
-            }
+		forest = fileSystem.getForest();
+		for (int i = 0; i < forest.length; i+=2) {
+			int a = forest[i];
+			int b = forest[i+1];
+			model.addForest(a, b);
+		}
 
-            walls[0] = new Wall(0, 0, new int[]{0, 0, 1, 1, 2, 2}, new int[]{0, -1, -1, 0, 0, 1}, new Color(158, 90, 6).brighter(), 0, wallContainers[0], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
-            walls[1] = new Wall(0, 0, new int[]{0, 0, 1, 1}, new int[]{0, -1, -1, 0}, new Color(158, 90, 6).brighter().brighter(), 1, wallContainers[1], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
-            walls[2] = new Wall(0, 0, new int[]{0, 0, 1, 1, 2}, new int[]{0, 1, 1, 2, 2}, new Color(158, 90, 6).darker(), 2, wallContainers[2], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
-            walls[3] = new Wall(0, 0, new int[]{0, -1, -1, 0, 0, -1, -1}, new int[]{0, 0, -1, -1, -2, -2, -3}, new Color(158, 90, 6), 3, wallContainers[3], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
+		ArrayList<Integer>[] walls = fileSystem.getWalls();
+		for(int i = 0; i < fileSystem.getNumberOfWalls(); i++)
+		{
+			int listToArray [] = new int [walls[i].size()-1];
+			for(int r = 1; r < walls[i].size(); r++)
+				listToArray[r-1] = walls[i].get(r);
 
-            model.setWalls(walls);
+			boolean isWall = walls[i].get(0) == 1 ? true : false;
+			model.addWallOrChain(isWall,listToArray);
+			fileSystem.incrementSize();
+		}
+		fileSystem.resetSize();
+		fileSystem.deleteMapFile();
 
-            myComponents = new MyComponents(model, cardLayout, card, levelNo);
-        } else if (levelNo == 2) {
+		levelView = new LevelView(gv, model, cardLayout, card, levelNo);
+	}
 
-            Soldier[] soldiers = new Soldier[7];
-            Wall[] walls = new Wall[4];
-            Rectangle[] wallContainers = new Rectangle[4];
+	public LevelView getPanel() {
+		return levelView;
+	}
 
-            // Allies
-            soldiers[0] = new Soldier(2, 0, Color.blue);
-            soldiers[1] = new Soldier(2, 3, Color.blue);
-            soldiers[2] = new Soldier(3, 2, Color.blue);
+	public int getInitialXShift() {
+		return model.getInitialXShift();
+	}
 
-            // Enemies
-            soldiers[3] = new Soldier(1, 2, Color.red);
-            soldiers[4] = new Soldier(1, 3, Color.red);
-            soldiers[5] = new Soldier(3, 0, Color.red);
-            soldiers[6] = new Soldier(4, 2, Color.red);
+	public int getMapWidth() {
+		return model.getMapWidth();
+	}
 
-            Castle castle = new Castle(1, 1, 2, 1, Color.green);
+	public int getSquareWidth() {
+		return model.getSquareWidth();
+	}
 
-            int mapWidth = 5;
-            int mapLength = 4;
-            model = new Model(mapWidth, mapLength, castle, soldiers, levelNo);
-            // 5, 4
+	public int getInitialYShift() {
+		return model.getInitialYShift();
+	}
 
-            for (int i = 0; i < walls.length; i++) {
-                wallContainers[i] = new Rectangle(model.initialXShift + model.squareWidth * i + (mapWidth - walls.length) * (model.squareWidth - 2) / 2, model.initialYShift + model.squareHeight * (mapLength + 1), model.squareWidth, model.squareHeight);
-            }
+	public int getSquareHeight() {
+		return model.getSquareHeight();
+	}
 
-            walls[0] = new Wall(0, 0, new int[]{0, 0, 1, 1, 2, 2}, new int[]{0, -1, -1, 0, 0, 1}, new Color(158, 90, 6).brighter(), 0, wallContainers[0], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
-            walls[1] = new Wall(0, 0, new int[]{0, 0, 1, 1}, new int[]{0, -1, -1, 0}, new Color(158, 90, 6).brighter().brighter(), 1, wallContainers[1], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
-            walls[2] = new Wall(0, 0, new int[]{0, 0, 1, 1, 2}, new int[]{0, 1, 1, 2, 2}, new Color(158, 90, 6).darker(), 2, wallContainers[2], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
-            walls[3] = new Wall(0, 0, new int[]{0, -1, -1, 0, 0, -1, -1}, new int[]{0, 0, -1, -1, -2, -2, -3}, new Color(158, 90, 6), 3, wallContainers[3], model.getInitialXShift(), model.getInitialYShift(), model.getSquareHeight(), model.getSquareWidth());
+	public int getMapLength() {
+		return model.getMapLength();
+	}
 
-            model.setWalls(walls);
+	void reset() {
+		model.reset();
+	}
 
-            myComponents = new MyComponents(model, cardLayout, card, levelNo);
+	public void startTimers() {
+		model.startTimers();
+		levelView.startTimer();
+	}
 
-        }
-
-    }
-
-    public JComponent getPanel() {
-        return myComponents;
-    }
-
-    public int getInitialXShift() {
-        return model.getInitialXShift();
-    }
-
-    public int getMapWidth() {
-        return model.getMapWidth();
-    }
-
-    public int getSquareWidth() {
-        return model.getSquareWidth();
-    }
-
-    public int getInitialYShift() {
-        return model.getInitialYShift();
-    }
-
-    public int getSquareHeight() {
-        return model.getSquareHeight();
-    }
-
-    public int getMapLength() {
-        return model.getMapLength();
-    }
-
-    void reset() {
-        model.reset();
-    }
+	public void stopTimers() {
+		levelView.stopTimer();
+		model.stopTimers();
+	}
 }
-
-//   void occupiedLine(int xInd, int yInd, int x1, int y1, int x2, int y2) {
-//
-//      int leftOne = (x1==x2) ? x1 : ((x1>x2) ? x2 : x1);
-//      int topOne = (y1==y2) ? y1 : ((y1>y2) ? y2 : y1);
-//      if(x1==x2)
-//         verLines[xInd + leftOne][yInd + topOne] = true;
-//      else
-//         horLines[xInd + leftOne][yInd + topOne] = true;
-//   }
-
